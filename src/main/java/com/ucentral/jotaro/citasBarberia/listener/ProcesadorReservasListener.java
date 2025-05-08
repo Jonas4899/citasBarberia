@@ -30,7 +30,8 @@ public class ProcesadorReservasListener {
     @RabbitListener(queues = RabbitMQConfig.QUEUE_PROCESAR_CITAS_NAME)
     @Transactional
     public void procesarSolicitudReserva(Map<String, Object> mensaje) {
-        Long idReserva = (Long) mensaje.get("idReserva");
+        Number idReservaNumber = (Number) mensaje.get("idReserva");
+        Long idReserva = idReservaNumber != null ? idReservaNumber.longValue() : null;
         System.out.println("Procesando solicitud de reserva recibida de RabbitMQ para reserva ID: " + idReserva);
 
         Reserva reserva = reservaRepository.findById(idReserva)

@@ -30,4 +30,9 @@ public class Cliente {
 
     @OneToMany(mappedBy = "cliente")
     private List<Reserva> reservas;
+    
+    @Override
+    public String toString() {
+        return nombre + " " + apellido + (correoElectronico != null && !correoElectronico.isEmpty() ? " (" + correoElectronico + ")" : "");
+    }
 }

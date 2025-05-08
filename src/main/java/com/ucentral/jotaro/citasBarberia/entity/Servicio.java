@@ -29,4 +29,10 @@ public class Servicio {
 
     @Column(precision = 10, scale = 2)
     private BigDecimal precio;
+    
+    @Override
+    public String toString() {
+        return nombre + (precio != null ? " - $" + precio : "") + 
+               (duracionEstimadaMinutos != null ? " (" + duracionEstimadaMinutos + " min)" : "");
+    }
 }
