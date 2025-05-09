@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional; // Importante
 import java.time.LocalDateTime;
 import java.util.HashMap; // O un DTO específico para el mensaje
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class CitaServiceImpl implements CitaService {
@@ -64,12 +65,73 @@ public class CitaServiceImpl implements CitaService {
         // Enviar todos los datos desacopla más al consumidor de la BD en esta etapa.
         // Por ahora, enviemos los IDs y la fecha/hora.
         Map<String, Object> mensaje = new HashMap<>();
+        mensaje.put("tipo", "RESERVA_CREADA");
         mensaje.put("idReserva", reservaGuardada.getIdReserva()); // Importante para luego actualizarla
         mensaje.put("idCliente", idCliente);
+        mensaje.put("nombreCliente", cliente.getNombre() + " " + cliente.getApellido());
         mensaje.put("idServicio", idServicio);
+        mensaje.put("nombreServicio", servicio.getNombre());
         mensaje.put("fechaHora", fechaHora.toString()); // Convertir a String para serialización simple
+        mensaje.put("estado", reservaGuardada.getEstado().toString());
+        mensaje.put("correoCliente", cliente.getCorreoElectronico()); // Añadimos correo del cliente para notificaciones
 
+        // Enviar a la cola de procesamiento de citas
         rabbitTemplate.convertAndSend(RabbitMQConfig.DIRECT_EXCHANGE_NAME, RabbitMQConfig.ROUTING_KEY_CITAS, mensaje);
         System.out.println("Mensaje de solicitud de reserva enviado a RabbitMQ para reserva ID: " + reservaGuardada.getIdReserva());
+        
+        // Enviar a la cola de estadísticas
+        rabbitTemplate.convertAndSend(RabbitMQConfig.FANOUT_EXCHANGE_EVENTOS_CITAS_NAME, "", mensaje);
+        System.out.println("Mensaje de estadísticas enviado a RabbitMQ para reserva ID: " + reservaGuardada.getIdReserva());
+    }
+    
+    @Override
+    @Transactional
+    public void actualizarEstadoReserva(Long idReserva, EstadoReserva nuevoEstado) {
+        Optional<Reserva> reservaOpt = reservaRepository.findById(idReserva);
+        if (reservaOpt.isPresent()) {
+            Reserva reserva = reservaOpt.get();
+            reserva.setEstado(nuevoEstado);
+            reservaRepository.save(reserva);
+            
+            // Enviar evento a estadísticas
+            Map<String, Object> mensaje = new HashMap<>();
+            mensaje.put("idReserva", reserva.getIdReserva());
+            mensaje.put("idCliente", reserva.getCliente().getIdCliente());
+            mensaje.put("nombreCliente", reserva.getCliente().getNombre() + " " + reserva.getCliente().getApellido());
+            mensaje.put("idServicio", reserva.getServicio().getIdServicio());
+            mensaje.put("nombreServicio", reserva.getServicio().getNombre());
+            mensaje.put("fechaHora", reserva.getFechaHoraInicio().toString());
+            mensaje.put("estado", nuevoEstado.toString());
+            
+            // Establecer el tipo de evento
+            switch (nuevoEstado) {
+                case CONFIRMADA:
+                    mensaje.put("tipo", "RESERVA_CONFIRMADA");
+                    break;
+                case CANCELADA_CLIENTE:
+                case CANCELADA_BARBERIA:
+                    mensaje.put("tipo", "RESERVA_CANCELADA");
+                    break;
+                case COMPLETADA:
+                    mensaje.put("tipo", "RESERVA_COMPLETADA");
+                    break;
+                case NO_ASISTIO:
+                    mensaje.put("tipo", "RESERVA_NO_ASISTIO");
+                    break;
+                default:
+                    mensaje.put("tipo", "RESERVA_ACTUALIZADA");
+            }
+            
+            // Enviar a la cola de estadísticas
+            rabbitTemplate.convertAndSend(RabbitMQConfig.FANOUT_EXCHANGE_EVENTOS_CITAS_NAME, "", mensaje);
+            System.out.println("Mensaje de estadísticas enviado a RabbitMQ para actualización de reserva ID: " + idReserva);
+        } else {
+            throw new RuntimeException("Reserva no encontrada con ID: " + idReserva);
+        }
+    }
+
+    @Override
+    public ReservaRepository getReservaRepository() {
+        return this.reservaRepository;
     }
 }

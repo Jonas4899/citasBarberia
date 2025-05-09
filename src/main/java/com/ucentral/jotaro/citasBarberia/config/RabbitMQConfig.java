@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
-    // --- Para el flujo de procesamiento de reservas (RF001) ---
     public static final String DIRECT_EXCHANGE_NAME = "citas.direct.exchange";
     public static final String QUEUE_PROCESAR_CITAS_NAME = "cola_procesar_citas";
     public static final String ROUTING_KEY_CITAS = "routing.key.citas";
@@ -37,7 +36,6 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(queueProcesarCitas).to(directExchange).with(ROUTING_KEY_CITAS);
     }
 
-    // --- Para el flujo de eventos post-confirmación (RF002, RF003) ---
     public static final String FANOUT_EXCHANGE_EVENTOS_CITAS_NAME = "citas.fanout.exchange.eventos";
     public static final String QUEUE_NOTIFICACIONES_NAME = "cola_notificaciones";
     public static final String QUEUE_ESTADISTICAS_NAME = "cola_estadisticas";

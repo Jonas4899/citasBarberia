@@ -1,41 +1,69 @@
 package com.ucentral.jotaro.citasBarberia.listener;
 
 import com.ucentral.jotaro.citasBarberia.config.RabbitMQConfig;
-// Importar Spring Mail si vas a enviar correos:
-// import org.springframework.mail.SimpleMailMessage;
-// import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @Service
 public class NotificacionListener {
 
-    // @Autowired
-    // private JavaMailSender mailSender; // Descomentar si configuras spring-boot-starter-mail
+    @Autowired
+    private JavaMailSender mailSender;
+    
+    @Value("${spring.mail.username}")
+    private String remitente;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NOTIFICACIONES_NAME)
     public void recibirEventoReservaParaNotificacion(Map<String, Object> evento) {
         System.out.println("LISTENER NOTIFICACIONES: Evento de reserva recibido: " + evento);
-        // String correoCliente = (String) evento.get("correoCliente");
-        // String asunto = "Confirmación de Reserva - Barbería XYZ";
-        // String cuerpo = "Su reserva para el servicio " + evento.get("idServicio") +
-        //                 " el día " + evento.get("fechaHora") + " ha sido " + evento.get("estado") + ".";
-        // enviarCorreo(correoCliente, asunto, cuerpo);
-        // Lógica para enviar notificación (email, SMS, etc.)
+        
+        try {
+            String correoCliente = (String) evento.get("correoCliente");
+            if (correoCliente == null || correoCliente.isEmpty()) {
+                System.err.println("Error: No se puede enviar notificación, correo del cliente no disponible en el evento: " + evento);
+                return;
+            }
+            
+            String nombreCliente = (String) evento.get("nombreCliente");
+            String nombreServicio = (String) evento.get("nombreServicio");
+            String fechaHora = (String) evento.get("fechaHora");
+            String estado = (String) evento.get("estado");
+            
+            String asunto = "Confirmación de Reserva - Barbería";
+            String cuerpo = "Hola " + nombreCliente + ",\n\n" +
+                            "Su reserva para el servicio '" + nombreServicio + "' " +
+                            "el día " + fechaHora + " ha sido " + estado + ".\n\n" +
+                            "Gracias por confiar en nuestros servicios.\n\n" +
+                            "Saludos,\n" +
+                            "El equipo de Barbería";
+            
+            enviarCorreo(correoCliente, asunto, cuerpo);
+        } catch (Exception e) {
+            System.err.println("Error al procesar la notificación: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
-    /*
     private void enviarCorreo(String para, String asunto, String cuerpo) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(para);
         message.setSubject(asunto);
         message.setText(cuerpo);
-        // message.setFrom("noreply@barberia.com"); // Configurar en application.properties
-        // mailSender.send(message);
-        System.out.println("Simulando envío de correo a: " + para + " | Asunto: " + asunto);
+        message.setFrom(remitente);
+        
+        try {
+            mailSender.send(message);
+            System.out.println("Correo enviado exitosamente a: " + para);
+        } catch (Exception e) {
+            System.err.println("Error al enviar correo a " + para + ": " + e.getMessage());
+            e.printStackTrace();
+        }
     }
-    */
 }

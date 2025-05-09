@@ -1,6 +1,6 @@
 package com.ucentral.jotaro.citasBarberia.entity;
 import jakarta.persistence.*;
-import lombok.Data; // O @Getter, @Setter, @ToString, @EqualsAndHashCode
+import lombok.Data; 
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
@@ -13,7 +13,7 @@ import java.util.List;
 @Table(name = "clientes")
 public class Cliente {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // H2 soporta IDENTITY
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idCliente;
 
     @Column(nullable = false, length = 100)

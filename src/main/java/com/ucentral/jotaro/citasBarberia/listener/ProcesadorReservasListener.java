@@ -52,6 +52,9 @@ public class ProcesadorReservasListener {
         eventoConfirmacion.put("fechaHora", reserva.getFechaHoraInicio().toString());
         eventoConfirmacion.put("estado", reserva.getEstado().toString());
         eventoConfirmacion.put("correoCliente", reserva.getCliente().getCorreoElectronico()); // Para notificaciones
+        eventoConfirmacion.put("nombreCliente", reserva.getCliente().getNombre()); // Añadimos nombre del cliente
+        eventoConfirmacion.put("nombreServicio", reserva.getServicio().getNombre()); // Añadimos nombre del servicio
+        eventoConfirmacion.put("tipo", "RESERVA_CONFIRMADA"); // Añadimos el tipo de evento
 
         rabbitTemplate.convertAndSend(RabbitMQConfig.FANOUT_EXCHANGE_EVENTOS_CITAS_NAME, "", eventoConfirmacion); // Routing key es ignorada por Fanout
         System.out.println("Evento de reserva confirmada enviado al Fanout Exchange para reserva ID: " + idReserva);
