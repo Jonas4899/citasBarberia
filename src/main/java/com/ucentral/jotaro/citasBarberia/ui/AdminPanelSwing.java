@@ -55,12 +55,6 @@ public class AdminPanelSwing extends JFrame {
     // Estadísticas components
     private JPanel estadisticasPanel;
     private JLabel lblTotalReservas;
-    private JTable estadisticasServicioTable;
-    private DefaultTableModel estadisticasServicioTableModel;
-    private JTable estadisticasEstadoTable;
-    private DefaultTableModel estadisticasEstadoTableModel;
-    private JTable estadisticasFechaTable;
-    private DefaultTableModel estadisticasFechaTableModel;
     private JButton btnRefrescarEstadisticas;
 
     public AdminPanelSwing(ClienteService clienteService, ServicioService servicioService, 
@@ -340,49 +334,12 @@ public class AdminPanelSwing extends JFrame {
         estadisticasPanel = new JPanel(new BorderLayout(10, 10));
         estadisticasPanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         
-        // Panel superior con total de reservas
-        JPanel totalReservasPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        totalReservasPanel.setBorder(BorderFactory.createTitledBorder("Total de Reservas"));
+        // Panel con total de reservas
+        JPanel totalReservasPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        totalReservasPanel.setBorder(BorderFactory.createTitledBorder("Estadísticas"));
         lblTotalReservas = new JLabel("Total de reservas: 0");
-        lblTotalReservas.setFont(new Font("Arial", Font.BOLD, 16));
+        lblTotalReservas.setFont(new Font("Arial", Font.BOLD, 24));
         totalReservasPanel.add(lblTotalReservas);
-        
-        // Panel central con tablas de estadísticas
-        JPanel tablasEstadisticasPanel = new JPanel(new GridLayout(1, 3, 10, 10));
-        
-        // Tabla de reservas por servicio
-        JPanel serviciosEstadisticasPanel = new JPanel(new BorderLayout());
-        serviciosEstadisticasPanel.setBorder(BorderFactory.createTitledBorder("Reservas por Servicio"));
-        String[] columnNamesServiciosEstadisticas = {"Servicio", "Cantidad"};
-        estadisticasServicioTableModel = new DefaultTableModel(columnNamesServiciosEstadisticas, 0) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
-        };
-        estadisticasServicioTable = new JTable(estadisticasServicioTableModel);
-        serviciosEstadisticasPanel.add(new JScrollPane(estadisticasServicioTable), BorderLayout.CENTER);
-        
-        // Tabla de reservas por estado
-        JPanel estadosEstadisticasPanel = new JPanel(new BorderLayout());
-        estadosEstadisticasPanel.setBorder(BorderFactory.createTitledBorder("Reservas por Estado"));
-        String[] columnNamesEstadosEstadisticas = {"Estado", "Cantidad"};
-        estadisticasEstadoTableModel = new DefaultTableModel(columnNamesEstadosEstadisticas, 0) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
-        };
-        estadisticasEstadoTable = new JTable(estadisticasEstadoTableModel);
-        estadosEstadisticasPanel.add(new JScrollPane(estadisticasEstadoTable), BorderLayout.CENTER);
-        
-        // Tabla de reservas por fecha
-        JPanel fechasEstadisticasPanel = new JPanel(new BorderLayout());
-        fechasEstadisticasPanel.setBorder(BorderFactory.createTitledBorder("Reservas por Fecha"));
-        String[] columnNamesFechasEstadisticas = {"Fecha", "Cantidad"};
-        estadisticasFechaTableModel = new DefaultTableModel(columnNamesFechasEstadisticas, 0) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
-        };
-        estadisticasFechaTable = new JTable(estadisticasFechaTableModel);
-        fechasEstadisticasPanel.add(new JScrollPane(estadisticasFechaTable), BorderLayout.CENTER);
-        
-        tablasEstadisticasPanel.add(serviciosEstadisticasPanel);
-        tablasEstadisticasPanel.add(estadosEstadisticasPanel);
-        tablasEstadisticasPanel.add(fechasEstadisticasPanel);
         
         // Panel de acciones
         JPanel accionesEstadisticasPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -391,8 +348,7 @@ public class AdminPanelSwing extends JFrame {
         accionesEstadisticasPanel.add(btnRefrescarEstadisticas);
         
         // Añadir todos los paneles al panel principal
-        estadisticasPanel.add(totalReservasPanel, BorderLayout.NORTH);
-        estadisticasPanel.add(tablasEstadisticasPanel, BorderLayout.CENTER);
+        estadisticasPanel.add(totalReservasPanel, BorderLayout.CENTER);
         estadisticasPanel.add(accionesEstadisticasPanel, BorderLayout.SOUTH);
     }
 
@@ -619,31 +575,8 @@ public class AdminPanelSwing extends JFrame {
     }
 
     private void cargarEstadisticas() {
-        // Limpiar tablas
-        estadisticasServicioTableModel.setRowCount(0);
-        estadisticasEstadoTableModel.setRowCount(0);
-        estadisticasFechaTableModel.setRowCount(0);
-        
         // Actualizar total de reservas
         int totalReservas = estadisticasListener.getTotalReservas();
         lblTotalReservas.setText("Total de reservas: " + totalReservas);
-        
-        // Cargar estadísticas por servicio
-        Map<String, Integer> reservasPorServicio = estadisticasListener.getReservasPorServicio();
-        reservasPorServicio.forEach((servicio, cantidad) -> {
-            estadisticasServicioTableModel.addRow(new Object[]{servicio, cantidad});
-        });
-        
-        // Cargar estadísticas por estado
-        Map<String, Integer> reservasPorEstado = estadisticasListener.getReservasPorEstado();
-        reservasPorEstado.forEach((estado, cantidad) -> {
-            estadisticasEstadoTableModel.addRow(new Object[]{estado, cantidad});
-        });
-        
-        // Cargar estadísticas por fecha
-        Map<String, Integer> reservasPorFecha = estadisticasListener.getReservasPorFecha();
-        reservasPorFecha.forEach((fecha, cantidad) -> {
-            estadisticasFechaTableModel.addRow(new Object[]{fecha, cantidad});
-        });
     }
 }

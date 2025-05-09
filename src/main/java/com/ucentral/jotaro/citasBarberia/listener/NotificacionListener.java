@@ -37,11 +37,20 @@ public class NotificacionListener {
             String estado = (String) evento.get("estado");
             
             String asunto = "Confirmación de Reserva - Barbería";
-            String cuerpo = "Hola " + nombreCliente + ",\n\n" +
-                            "Su reserva para el servicio '" + nombreServicio + "' " +
-                            "el día " + fechaHora + " ha sido " + estado + ".\n\n" +
-                            "Gracias por confiar en nuestros servicios.\n\n" +
-                            "Saludos,\n" +
+            String cuerpo = "Estimado/a " + nombreCliente + ",\n\n" +
+                            "Le confirmamos que su reserva ha sido confirmada.\n\n" +
+                            "Detalles de su reserva:\n" +
+                            "----------------------------------------\n" +
+                            "Servicio: " + nombreServicio + "\n" +
+                            "Fecha y Hora: " + fechaHora + "\n" +
+                            "Estado: Confirmada\n" +
+                            "----------------------------------------\n\n" +
+                            "Información importante:\n" +
+                            "- Por favor, llegue 5 minutos antes de su cita\n" +
+                            "- Si necesita cancelar o reprogramar, hágalo con al menos 24 horas de anticipación\n" +
+                            "Si tiene alguna pregunta o necesita asistencia, no dude en contactarnos.\n\n" +
+                            "Gracias por elegir nuestros servicios.\n\n" +
+                            "Saludos cordiales,\n" +
                             "El equipo de Barbería";
             
             enviarCorreo(correoCliente, asunto, cuerpo);

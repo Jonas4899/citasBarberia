@@ -1,17 +1,13 @@
 package com.ucentral.jotaro.citasBarberia.listener;
 
 import com.ucentral.jotaro.citasBarberia.config.RabbitMQConfig;
-import com.ucentral.jotaro.citasBarberia.entity.EstadoReserva;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -23,133 +19,158 @@ public class EstadisticasListener {
     // Contador para el total de reservas
     private final AtomicInteger totalReservas = new AtomicInteger(0);
     
-    // Mapas para almacenar estadísticas
-    private final Map<String, AtomicInteger> reservasPorServicio = new ConcurrentHashMap<>();
-    private final Map<String, AtomicInteger> reservasPorEstado = new ConcurrentHashMap<>();
-    private final Map<String, AtomicInteger> reservasPorFecha = new ConcurrentHashMap<>();
+    // Conjunto para llevar registro de reservas ya contabilizadas
+    private final Set<Long> reservasContabilizadas = ConcurrentHashMap.newKeySet();
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_ESTADISTICAS_NAME)
     public void recibirEventoReservaParaEstadisticas(Map<String, Object> evento) {
         logger.info("LISTENER ESTADÍSTICAS: Evento de reserva recibido: {}", evento);
+        logger.debug("Claves disponibles en el evento: {}", evento.keySet());
         
         try {
             // Verificar tipo de evento
             String tipoEvento = (String) evento.get("tipo");
             
             if (tipoEvento == null) {
-                logger.warn("Evento recibido sin tipo definido");
+                logger.warn("Evento recibido sin tipo definido: {}", evento);
                 return;
             }
             
             switch (tipoEvento) {
                 case "RESERVA_CREADA":
+                    logger.info("Procesando evento de creación de reserva: {}", evento);
+                    procesarEventoReservaCreada(evento);
+                    logger.info("Estadísticas actualizadas - Total: {}", totalReservas.get());
+                    break;
                 case "RESERVA_CONFIRMADA":
-                    procesarEventoReserva(evento);
+                    logger.info("Procesando evento de confirmación de reserva: {}", evento);
+                    procesarEventoReservaCreada(evento); // Contabilizamos como una creación si no existe
+                    logger.info("Estadísticas actualizadas - Total: {}", totalReservas.get());
                     break;
-                case "RESERVA_CANCELADA":
-                    procesarEventoCancelacion(evento);
-                    break;
-                case "RESERVA_COMPLETADA":
-                    procesarEventoCompletada(evento);
+                case "RESERVA_ACTUALIZADA":
+                    procesarEventoActualizada(evento);
+                    logger.info("Estadísticas actualizadas después de actualización - Total Reservas: {}", totalReservas.get());
                     break;
                 default:
                     logger.info("Tipo de evento no procesado para estadísticas: {}", tipoEvento);
             }
         } catch (Exception e) {
             logger.error("Error al procesar evento para estadísticas: {}", e.getMessage(), e);
+            logger.error("Contenido del evento: {}", evento);
         }
     }
     
-    private void procesarEventoReserva(Map<String, Object> evento) {
+    private void procesarEventoReservaCreada(Map<String, Object> evento) {
+        Long reservaId = obtenerReservaId(evento);
+        if (reservaId == null) {
+            logger.warn("No se pudo obtener el ID de la reserva del evento: {}", evento);
+            return;
+        }
+        
+        logger.debug("ID de reserva obtenido: {}", reservaId);
+        
+        // Verificar si esta reserva ya ha sido contabilizada
+        if (reservasContabilizadas.contains(reservaId)) {
+            logger.info("Reserva {} ya contabilizada previamente", reservaId);
+            return;
+        }
+        
+        // Marcar como contabilizada
+        reservasContabilizadas.add(reservaId);
+        logger.debug("Reserva {} añadida a contabilizadas", reservaId);
+        
         // Incrementar total de reservas
-        totalReservas.incrementAndGet();
-        
-        // Actualizar reservas por servicio
-        String servicio = obtenerNombreServicio(evento);
-        if (servicio != null) {
-            reservasPorServicio.computeIfAbsent(servicio, k -> new AtomicInteger(0)).incrementAndGet();
-        }
-        
-        // Actualizar reservas por estado
-        String estado = (String) evento.get("estado");
-        if (estado != null) {
-            reservasPorEstado.computeIfAbsent(estado, k -> new AtomicInteger(0)).incrementAndGet();
+        int nuevoTotal = totalReservas.incrementAndGet();
+        logger.info("Total de reservas incrementado a: {}", nuevoTotal);
+    }
+    
+    private void procesarEventoActualizada(Map<String, Object> evento) {
+        Long reservaId = obtenerReservaId(evento);
+        if (reservaId == null) {
+            logger.warn("No se pudo obtener el ID de la reserva del evento de actualización: {}", evento);
+            return;
         }
         
-        // Actualizar reservas por fecha
-        String fechaStr = obtenerFechaFormateada(evento);
-        if (fechaStr != null) {
-            reservasPorFecha.computeIfAbsent(fechaStr, k -> new AtomicInteger(0)).incrementAndGet();
+        // Si la reserva no está contabilizada, procesarla como nueva
+        if (!reservasContabilizadas.contains(reservaId)) {
+            logger.info("Reserva {} no estaba contabilizada, procesando como nueva", reservaId);
+            procesarEventoReservaCreada(evento);
         }
     }
     
-    private void procesarEventoCancelacion(Map<String, Object> evento) {
-        // Actualizar estado de cancelación
-        String estado = (String) evento.get("estado");
-        if (estado != null) {
-            reservasPorEstado.computeIfAbsent(estado, k -> new AtomicInteger(0)).incrementAndGet();
+    private Long obtenerReservaId(Map<String, Object> evento) {
+        // Imprimir todas las claves disponibles en el evento para depuración
+        logger.debug("Claves disponibles en el evento: {}", evento.keySet());
+        
+        // Verificar 'idReserva' (nombre usado en la aplicación)
+        Object idObj = evento.get("idReserva");
+        if (idObj != null) {
+            logger.debug("Encontrado ID de reserva como 'idReserva': {}", idObj);
+            return convertirALong(idObj);
         }
-    }
-    
-    private void procesarEventoCompletada(Map<String, Object> evento) {
-        // Actualizar estado de completada
-        String estado = (String) evento.get("estado");
-        if (estado != null) {
-            reservasPorEstado.computeIfAbsent(estado, k -> new AtomicInteger(0)).incrementAndGet();
+        
+        // Verificar 'reservaId'
+        idObj = evento.get("reservaId");
+        if (idObj != null) {
+            logger.debug("Encontrado ID de reserva como 'reservaId': {}", idObj);
+            return convertirALong(idObj);
         }
-    }
-    
-    private String obtenerNombreServicio(Map<String, Object> evento) {
-        // Intentar obtener el nombre del servicio desde diferentes campos posibles
-        String servicio = (String) evento.get("nombreServicio");
-        if (servicio == null) {
-            servicio = (String) evento.get("servicio");
+        
+        // Verificar 'id'
+        idObj = evento.get("id");
+        if (idObj != null) {
+            logger.debug("Encontrado ID de reserva como 'id': {}", idObj);
+            return convertirALong(idObj);
         }
-        return servicio;
-    }
-    
-    private String obtenerFechaFormateada(Map<String, Object> evento) {
-        try {
-            String fechaHoraStr = (String) evento.get("fechaHora");
-            if (fechaHoraStr != null) {
-                LocalDateTime fechaHora = LocalDateTime.parse(fechaHoraStr);
-                return fechaHora.toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        
+        // Intentar buscar dentro de un objeto "reserva" si existe
+        Object reservaObj = evento.get("reserva");
+        if (reservaObj instanceof Map) {
+            Map<?, ?> reservaMap = (Map<?, ?>) reservaObj;
+            logger.debug("Encontrado objeto 'reserva'. Claves: {}", reservaMap.keySet());
+            
+            idObj = reservaMap.get("id");
+            if (idObj != null) {
+                logger.debug("Encontrado ID en objeto 'reserva': {}", idObj);
+                return convertirALong(idObj);
             }
-        } catch (Exception e) {
-            logger.warn("No se pudo parsear la fecha del evento: {}", e.getMessage());
+            
+            idObj = reservaMap.get("idReserva");
+            if (idObj != null) {
+                logger.debug("Encontrado 'idReserva' en objeto 'reserva': {}", idObj);
+                return convertirALong(idObj);
+            }
         }
+        
+        logger.warn("No se encontró un ID de reserva válido en ningún campo del evento");
         return null;
     }
     
-    // Métodos para consultar estadísticas
+    private Long convertirALong(Object idObj) {
+        if (idObj == null) return null;
+        
+        logger.debug("Intentando convertir a Long: {} (tipo: {})", idObj, idObj.getClass().getName());
+        
+        if (idObj instanceof Long) {
+            return (Long) idObj;
+        } else if (idObj instanceof Integer) {
+            return ((Integer) idObj).longValue();
+        } else if (idObj instanceof Number) {
+            return ((Number) idObj).longValue();
+        } else if (idObj instanceof String) {
+            try {
+                return Long.parseLong((String) idObj);
+            } catch (NumberFormatException e) {
+                logger.warn("No se pudo convertir la cadena a Long: '{}'", idObj);
+            }
+        }
+        
+        logger.warn("No se pudo convertir el objeto a Long: {}", idObj);
+        return null;
+    }
+    
+    // Método para consultar estadísticas
     public int getTotalReservas() {
         return totalReservas.get();
-    }
-    
-    public Map<String, Integer> getReservasPorServicio() {
-        Map<String, Integer> resultado = new HashMap<>();
-        reservasPorServicio.forEach((key, value) -> resultado.put(key, value.get()));
-        return resultado;
-    }
-    
-    public Map<String, Integer> getReservasPorEstado() {
-        Map<String, Integer> resultado = new HashMap<>();
-        reservasPorEstado.forEach((key, value) -> resultado.put(key, value.get()));
-        return resultado;
-    }
-    
-    public Map<String, Integer> getReservasPorFecha() {
-        Map<String, Integer> resultado = new HashMap<>();
-        reservasPorFecha.forEach((key, value) -> resultado.put(key, value.get()));
-        return resultado;
-    }
-    
-    public Map<String, Object> obtenerTodasLasEstadisticas() {
-        Map<String, Object> estadisticas = new HashMap<>();
-        estadisticas.put("totalReservas", getTotalReservas());
-        estadisticas.put("reservasPorServicio", getReservasPorServicio());
-        estadisticas.put("reservasPorEstado", getReservasPorEstado());
-        estadisticas.put("reservasPorFecha", getReservasPorFecha());
-        return estadisticas;
     }
 }
