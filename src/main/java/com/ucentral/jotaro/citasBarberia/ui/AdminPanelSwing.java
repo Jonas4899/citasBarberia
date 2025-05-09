@@ -68,8 +68,8 @@ public class AdminPanelSwing extends JFrame {
 
         initComponents();
         loadInitialData();
-        pack(); // Ajustar tamaño
-        setLocationRelativeTo(null); // Centrar
+        pack();
+        setLocationRelativeTo(null);
     }
 
     public AdminPanelSwing(ClienteService clienteService, ServicioService servicioService, 
@@ -84,13 +84,13 @@ public class AdminPanelSwing extends JFrame {
 
         initComponents();
         loadInitialData();
-        pack(); // Ajustar tamaño
-        setLocationRelativeTo(null); // Centrar
+        pack();
+        setLocationRelativeTo(null);
     }
 
     private void initComponents() {
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // No cerrar toda la app
-        setLayout(new BorderLayout(10, 10)); // Espaciado general
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout(10, 10));
         getRootPane().setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
 
@@ -107,20 +107,15 @@ public class AdminPanelSwing extends JFrame {
         tabbedPane.addTab("Estadísticas", createScrollablePanel(estadisticasPanel));
 
         add(tabbedPane, BorderLayout.CENTER);
-
-        // No es necesario el botón de actualizar si las tablas se refrescan tras cada operación
-        // Si se desea, se puede añadir.
     }
 
-    // Helper para hacer paneles scrolleables si el contenido es muy grande
     private JScrollPane createScrollablePanel(JPanel panel) {
         JScrollPane scrollPane = new JScrollPane(panel);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // Quitar borde del scrollpane si el panel ya tiene
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
         return scrollPane;
     }
 
-
-    private JPanel serviciosPanel; // Declarar como miembro de la clase
+    private JPanel serviciosPanel;
     private void initServiciosPanel() {
         serviciosPanel = new JPanel(new BorderLayout(10, 10));
         serviciosPanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
@@ -199,7 +194,7 @@ public class AdminPanelSwing extends JFrame {
         serviciosPanel.add(formServiciosPanel, BorderLayout.SOUTH);
     }
 
-    private JPanel clientesPanel; // Declarar como miembro de la clase
+    private JPanel clientesPanel;
     private void initClientesPanel() {
         clientesPanel = new JPanel(new BorderLayout(10, 10));
         clientesPanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
@@ -229,7 +224,6 @@ public class AdminPanelSwing extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int y = 0;
-        // Nombre
         gbc.gridx = 0; gbc.gridy = y;
         formClientesPanel.add(new JLabel("Nombre:"), gbc);
         gbc.gridx = 1; gbc.weightx = 1.0;
@@ -237,28 +231,24 @@ public class AdminPanelSwing extends JFrame {
         formClientesPanel.add(txtNombreCliente, gbc);
         gbc.weightx = 0;
 
-        // Apellido
         y++; gbc.gridx = 0; gbc.gridy = y;
         formClientesPanel.add(new JLabel("Apellido:"), gbc);
         gbc.gridx = 1;
         txtApellidoCliente = new JTextField(25);
         formClientesPanel.add(txtApellidoCliente, gbc);
 
-        // Email
         y++; gbc.gridx = 0; gbc.gridy = y;
         formClientesPanel.add(new JLabel("Email:"), gbc);
         gbc.gridx = 1;
         txtEmailCliente = new JTextField(25);
         formClientesPanel.add(txtEmailCliente, gbc);
 
-        // Teléfono
         y++; gbc.gridx = 0; gbc.gridy = y;
         formClientesPanel.add(new JLabel("Teléfono:"), gbc);
         gbc.gridx = 1;
         txtTelefonoCliente = new JTextField(15);
         formClientesPanel.add(txtTelefonoCliente, gbc);
 
-        // Botones
         y++; gbc.gridx = 0; gbc.gridy = y; gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER; gbc.fill = GridBagConstraints.NONE;
         JPanel botonesClientePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
@@ -360,14 +350,14 @@ public class AdminPanelSwing extends JFrame {
     }
 
     private void loadServicios() {
-        serviciosTableModel.setRowCount(0); // Limpiar tabla
+        serviciosTableModel.setRowCount(0);
         List<Servicio> servicios = servicioService.listarTodosLosServicios();
         for (Servicio s : servicios) {
             serviciosTableModel.addRow(new Object[]{s.getIdServicio(), s.getNombre(), s.getDescripcion(), s.getDuracionEstimadaMinutos(), s.getPrecio()});
         }
     }
     private void loadClientes() {
-        clientesTableModel.setRowCount(0); // Limpiar tabla
+        clientesTableModel.setRowCount(0);
         List<Cliente> clientes = clienteService.listarTodosLosClientes();
         for (Cliente c : clientes) {
             clientesTableModel.addRow(new Object[]{c.getIdCliente(), c.getNombre(), c.getApellido(), c.getCorreoElectronico(), c.getTelefono()});
@@ -528,7 +518,7 @@ public class AdminPanelSwing extends JFrame {
     }
 
     private void loadReservas() {
-        reservasTableModel.setRowCount(0); // Limpiar tabla
+        reservasTableModel.setRowCount(0);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         
         List<Reserva> reservas = reservaRepository.findAllWithClienteAndServicio();

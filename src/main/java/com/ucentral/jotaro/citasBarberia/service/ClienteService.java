@@ -9,5 +9,4 @@ public interface ClienteService {
     Optional<Cliente> obtenerClientePorId(Long id);
     List<Cliente> listarTodosLosClientes();
     void eliminarCliente(Long id);
-    // Puedes añadir más métodos según tus necesidades (ej. actualizar, buscar por email, etc.)
 }

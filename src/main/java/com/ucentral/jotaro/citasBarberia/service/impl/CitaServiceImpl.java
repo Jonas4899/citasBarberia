@@ -12,10 +12,10 @@ import com.ucentral.jotaro.citasBarberia.service.CitaService;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Importante
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashMap; // O un DTO específico para el mensaje
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -24,8 +24,8 @@ public class CitaServiceImpl implements CitaService {
 
     private final RabbitTemplate rabbitTemplate;
     private final ReservaRepository reservaRepository;
-    private final ClienteRepository clienteRepository; // Para obtener el cliente
-    private final ServicioRepository servicioRepository; // Para obtener el servicio
+    private final ClienteRepository clienteRepository;
+    private final ServicioRepository servicioRepository;
 
     @Autowired
     public CitaServiceImpl(RabbitTemplate rabbitTemplate,
@@ -39,7 +39,7 @@ public class CitaServiceImpl implements CitaService {
     }
 
     @Override
-    @Transactional // Para asegurar que la reserva se guarde y el mensaje se envíe, o ninguno
+    @Transactional
     public void solicitarReserva(Long idCliente, Long idServicio, LocalDateTime fechaHora) {
         System.out.println("Solicitando reserva para cliente ID: " + idCliente + ", servicio ID: " + idServicio + " a las " + fechaHora);
 
@@ -48,38 +48,28 @@ public class CitaServiceImpl implements CitaService {
         Servicio servicio = servicioRepository.findById(idServicio)
                 .orElseThrow(() -> new RuntimeException("Servicio no encontrado con ID: " + idServicio));
 
-        // 1. Opcional: Crear y guardar la reserva con estado PENDIENTE
         Reserva nuevaReserva = new Reserva();
         nuevaReserva.setCliente(cliente);
         nuevaReserva.setServicio(servicio);
         nuevaReserva.setFechaHoraInicio(fechaHora);
-        nuevaReserva.setEstado(EstadoReserva.PENDIENTE); // Se actualiza en onCreate()
-        // nuevaReserva.setFechaCreacion(LocalDateTime.now()); // Se actualiza con @PrePersist
+        nuevaReserva.setEstado(EstadoReserva.PENDIENTE);
         Reserva reservaGuardada = reservaRepository.save(nuevaReserva);
         System.out.println("Reserva guardada inicialmente con ID: " + reservaGuardada.getIdReserva() + " y estado PENDIENTE");
 
-
-        // 2. Preparar y enviar mensaje a RabbitMQ
-        // Puedes enviar el ID de la reserva, o todos los datos necesarios para procesarla.
-        // Enviar el ID es más simple si el consumidor puede luego leer de la BD.
-        // Enviar todos los datos desacopla más al consumidor de la BD en esta etapa.
-        // Por ahora, enviemos los IDs y la fecha/hora.
         Map<String, Object> mensaje = new HashMap<>();
         mensaje.put("tipo", "RESERVA_CREADA");
-        mensaje.put("idReserva", reservaGuardada.getIdReserva()); // Importante para luego actualizarla
+        mensaje.put("idReserva", reservaGuardada.getIdReserva());
         mensaje.put("idCliente", idCliente);
         mensaje.put("nombreCliente", cliente.getNombre() + " " + cliente.getApellido());
         mensaje.put("idServicio", idServicio);
         mensaje.put("nombreServicio", servicio.getNombre());
-        mensaje.put("fechaHora", fechaHora.toString()); // Convertir a String para serialización simple
+        mensaje.put("fechaHora", fechaHora.toString());
         mensaje.put("estado", reservaGuardada.getEstado().toString());
-        mensaje.put("correoCliente", cliente.getCorreoElectronico()); // Añadimos correo del cliente para notificaciones
+        mensaje.put("correoCliente", cliente.getCorreoElectronico());
 
-        // Enviar a la cola de procesamiento de citas
         rabbitTemplate.convertAndSend(RabbitMQConfig.DIRECT_EXCHANGE_NAME, RabbitMQConfig.ROUTING_KEY_CITAS, mensaje);
         System.out.println("Mensaje de solicitud de reserva enviado a RabbitMQ para reserva ID: " + reservaGuardada.getIdReserva());
         
-        // Enviar a la cola de estadísticas
         rabbitTemplate.convertAndSend(RabbitMQConfig.FANOUT_EXCHANGE_EVENTOS_CITAS_NAME, "", mensaje);
         System.out.println("Mensaje de estadísticas enviado a RabbitMQ para reserva ID: " + reservaGuardada.getIdReserva());
     }
@@ -93,7 +83,6 @@ public class CitaServiceImpl implements CitaService {
             reserva.setEstado(nuevoEstado);
             reservaRepository.save(reserva);
             
-            // Enviar evento a estadísticas
             Map<String, Object> mensaje = new HashMap<>();
             mensaje.put("idReserva", reserva.getIdReserva());
             mensaje.put("idCliente", reserva.getCliente().getIdCliente());
@@ -103,7 +92,6 @@ public class CitaServiceImpl implements CitaService {
             mensaje.put("fechaHora", reserva.getFechaHoraInicio().toString());
             mensaje.put("estado", nuevoEstado.toString());
             
-            // Establecer el tipo de evento
             switch (nuevoEstado) {
                 case CONFIRMADA:
                     mensaje.put("tipo", "RESERVA_CONFIRMADA");
@@ -122,7 +110,6 @@ public class CitaServiceImpl implements CitaService {
                     mensaje.put("tipo", "RESERVA_ACTUALIZADA");
             }
             
-            // Enviar a la cola de estadísticas
             rabbitTemplate.convertAndSend(RabbitMQConfig.FANOUT_EXCHANGE_EVENTOS_CITAS_NAME, "", mensaje);
             System.out.println("Mensaje de estadísticas enviado a RabbitMQ para actualización de reserva ID: " + idReserva);
         } else {

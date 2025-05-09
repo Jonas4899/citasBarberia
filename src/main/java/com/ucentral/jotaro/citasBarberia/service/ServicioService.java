@@ -4,7 +4,7 @@ import com.ucentral.jotaro.citasBarberia.entity.Servicio;
 import java.util.List;
 import java.util.Optional;
 
-public interface ServicioService { // Nombre consistence con la entidad Servicio
+public interface ServicioService {
     Servicio guardarServicio(Servicio servicio);
     Optional<Servicio> obtenerServicioPorId(Long id);
     List<Servicio> listarTodosLosServicios();

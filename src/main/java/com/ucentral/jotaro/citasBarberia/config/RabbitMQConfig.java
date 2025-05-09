@@ -28,7 +28,7 @@ public class RabbitMQConfig {
 
     @Bean
     Queue queueProcesarCitas() {
-        return new Queue(QUEUE_PROCESAR_CITAS_NAME, true); // true para hacerla durable
+        return new Queue(QUEUE_PROCESAR_CITAS_NAME, true);
     }
 
     @Bean

@@ -16,10 +16,8 @@ public class EstadisticasListener {
 
     private static final Logger logger = LoggerFactory.getLogger(EstadisticasListener.class);
     
-    // Contador para el total de reservas
     private final AtomicInteger totalReservas = new AtomicInteger(0);
     
-    // Conjunto para llevar registro de reservas ya contabilizadas
     private final Set<Long> reservasContabilizadas = ConcurrentHashMap.newKeySet();
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_ESTADISTICAS_NAME)
@@ -28,7 +26,6 @@ public class EstadisticasListener {
         logger.debug("Claves disponibles en el evento: {}", evento.keySet());
         
         try {
-            // Verificar tipo de evento
             String tipoEvento = (String) evento.get("tipo");
             
             if (tipoEvento == null) {
@@ -44,7 +41,7 @@ public class EstadisticasListener {
                     break;
                 case "RESERVA_CONFIRMADA":
                     logger.info("Procesando evento de confirmación de reserva: {}", evento);
-                    procesarEventoReservaCreada(evento); // Contabilizamos como una creación si no existe
+                    procesarEventoReservaCreada(evento);
                     logger.info("Estadísticas actualizadas - Total: {}", totalReservas.get());
                     break;
                 case "RESERVA_ACTUALIZADA":
@@ -69,7 +66,6 @@ public class EstadisticasListener {
         
         logger.debug("ID de reserva obtenido: {}", reservaId);
         
-        // Verificar si esta reserva ya ha sido contabilizada
         if (reservasContabilizadas.contains(reservaId)) {
             logger.info("Reserva {} ya contabilizada previamente", reservaId);
             return;
@@ -91,7 +87,6 @@ public class EstadisticasListener {
             return;
         }
         
-        // Si la reserva no está contabilizada, procesarla como nueva
         if (!reservasContabilizadas.contains(reservaId)) {
             logger.info("Reserva {} no estaba contabilizada, procesando como nueva", reservaId);
             procesarEventoReservaCreada(evento);
@@ -99,31 +94,26 @@ public class EstadisticasListener {
     }
     
     private Long obtenerReservaId(Map<String, Object> evento) {
-        // Imprimir todas las claves disponibles en el evento para depuración
         logger.debug("Claves disponibles en el evento: {}", evento.keySet());
         
-        // Verificar 'idReserva' (nombre usado en la aplicación)
         Object idObj = evento.get("idReserva");
         if (idObj != null) {
             logger.debug("Encontrado ID de reserva como 'idReserva': {}", idObj);
             return convertirALong(idObj);
         }
         
-        // Verificar 'reservaId'
         idObj = evento.get("reservaId");
         if (idObj != null) {
             logger.debug("Encontrado ID de reserva como 'reservaId': {}", idObj);
             return convertirALong(idObj);
         }
         
-        // Verificar 'id'
         idObj = evento.get("id");
         if (idObj != null) {
             logger.debug("Encontrado ID de reserva como 'id': {}", idObj);
             return convertirALong(idObj);
         }
         
-        // Intentar buscar dentro de un objeto "reserva" si existe
         Object reservaObj = evento.get("reserva");
         if (reservaObj instanceof Map) {
             Map<?, ?> reservaMap = (Map<?, ?>) reservaObj;
@@ -169,7 +159,6 @@ public class EstadisticasListener {
         return null;
     }
     
-    // Método para consultar estadísticas
     public int getTotalReservas() {
         return totalReservas.get();
     }
