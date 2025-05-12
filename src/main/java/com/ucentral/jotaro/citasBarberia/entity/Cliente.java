@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 
 import java.util.List;
 
-@Data
+@Data // Genera los getters y setters
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
